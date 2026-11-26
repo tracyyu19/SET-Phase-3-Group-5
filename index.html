@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en"><head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8">
+<title>Find the Third</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: three views (overview, play, design notes). Play is a single centered game screen; notes pair a labeled snapshot with its load notes. */
+:root{
+  --bg:#EEF0F6; --panel:#FFFFFF; --ink:#1A1C2B; --muted:#5B5F75; --line:#D6D9E4;
+  --accent:#3A3EB0; --accent-soft:#E3E4F8;
+  --ok:#0F8B8D; --ok-soft:#DDF2F2; --bad:#D9480F; --bad-soft:#FBE6DC;
+  --set-red:#D7263D; --set-green:#13924B; --set-purple:#6B2D8F;
+  --cardface:#FDFDFE; --cardedge:#CDD0DC;
+  --i:#3A3EB0; --e:#B4610A; --g:#0F8B8D;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12131C; --panel:#1C1E2A; --ink:#ECEDF5; --muted:#A3A7BD; --line:#2E3142;
+  --accent:#9EA2FF; --accent-soft:#2A2C4A; --ok:#3CC7C9; --ok-soft:#163436; --bad:#FF8A5B; --bad-soft:#3A2219;
+  --cardface:#F4F4F8; --cardedge:#3A3D50; --i:#9EA2FF; --e:#F0A54A; --g:#3CC7C9; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12131C; --panel:#1C1E2A; --ink:#ECEDF5; --muted:#A3A7BD; --line:#2E3142;
+  --accent:#9EA2FF; --accent-soft:#2A2C4A; --ok:#3CC7C9; --ok-soft:#163436; --bad:#FF8A5B; --bad-soft:#3A2219;
+  --cardface:#F4F4F8; --cardedge:#3A3D50; --i:#9EA2FF; --e:#F0A54A; --g:#3CC7C9; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 56px}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:var(--accent)}
+button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(34px,6vw,56px);line-height:1;margin:8px 0 12px;letter-spacing:-.02em;text-wrap:balance}
+h2.sec{font-family:var(--display);font-weight:800;font-size:24px;margin:0 0 12px;letter-spacing:-.01em}
+.lede{margin:0;color:var(--muted);max-width:60ch;font-size:17px}
+.btn{position:relative;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:8px 14px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+.btn.lg{padding:12px 20px;font-size:15px}
+.btn:disabled{cursor:not-allowed;opacity:.55}
+.btn.hintbtn{outline:2.5px dashed var(--accent);outline-offset:2px;background:var(--accent-soft)}
+.btn svg{width:14px;height:14px}
+.ctas{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px}
+
+/* overview */
+.hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:28px;align-items:end}
+@media (max-width:860px){.hero{grid-template-columns:minmax(0,1fr)}}
+.facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;font-size:14px;margin:0}
+.facts dt{color:var(--muted);font-weight:600}
+.facts dd{margin:0}
+.story{font-size:17px;margin:0;max-width:65ch}
+.story b{font-weight:600}
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:860px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.steps{grid-template-columns:minmax(0,1fr)}}
+.stepcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.stepcard .n{font-family:var(--display);font-weight:800;font-size:26px;line-height:1;color:var(--accent)}
+.stepcard h3{margin:0;font-size:16px}
+.stepcard p{margin:0;color:var(--muted);font-size:14px;flex:1}
+.stepcard button{align-self:flex-start;background:none;border:0;padding:0;color:var(--accent);font-weight:600;font-size:13px}
+.decisions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 28px;margin:0;padding:0;list-style:none}
+@media (max-width:700px){.decisions{grid-template-columns:minmax(0,1fr)}}
+.decisions li{border-top:1px solid var(--line);padding-top:10px}
+.decisions b{display:block;margin-bottom:2px}
+.decisions span{color:var(--muted);font-size:14px}
+
+/* play */
+.stepname{max-width:560px;margin:0 auto 12px;text-align:center;font-size:13px;color:var(--muted);min-height:1.5em}
+.playbar{max-width:560px;margin:0 auto 8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px}
+.playbar a{text-decoration:none;font-weight:600}
+.stepmenu{display:flex;align-items:center;gap:8px;color:var(--muted)}
+.stepmenu .pills{display:flex;gap:3px}
+.stepmenu button{min-width:24px;height:24px;padding:0 7px!important;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:11px;font-weight:700;color:var(--muted);padding:0}
+.stepmenu button[aria-current="step"]{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+.presenter{max-width:560px;margin:0 auto 12px;font-size:13px;color:var(--muted);background:var(--panel);border:1px dashed var(--line);border-radius:12px;padding:8px 12px}
+.presenter b{color:var(--ink)}
+.stage{max-width:560px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:22px}
+
+/* game screen (shared by play + snapshots) */
+.screen{position:relative;width:100%;display:flex;flex-direction:column;gap:14px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:26px}
+.steplabel{font-family:var(--display);font-weight:600;font-size:15px}
+.dots{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}
+.dot{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--muted)}
+.dot.hit{background:var(--ok);border-color:var(--ok)}
+.dot.miss{background:var(--bad);border-color:var(--bad)}
+.dot.cur{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.timer{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:56px;text-align:right}
+.tbar{width:80px;height:6px;border-radius:3px;background:var(--line);overflow:hidden;display:inline-block;vertical-align:middle;margin-right:6px}
+.tbar i{display:block;height:100%;background:var(--accent);transition:width .2s linear}
+.tbar.low i{background:var(--bad)}
+.instr{margin:0;font-weight:500;min-height:2.9em}
+.instr small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.main,.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+/* cards capped in width so two rows of three stay compact */
+.stage .board{max-width:420px;width:100%;margin:0 auto}
+.card{aspect-ratio:2/3;background:var(--cardface);border:1.5px solid var(--cardedge);border-radius:10px;padding:4px;display:block;width:100%;
+  transition:transform .15s, box-shadow .15s, outline-color .15s;outline:3px solid transparent;outline-offset:1px}
+.card svg{width:100%;height:100%;display:block}
+.card:hover{transform:translateY(-2px)}
+.card.sel{outline-color:var(--accent);transform:translateY(-3px)}
+.card.hint{outline:2.5px dashed var(--accent)}
+.card.good{outline-color:var(--ok);box-shadow:0 0 0 7px var(--ok-soft)}
+.card.bad{outline-color:var(--bad);box-shadow:0 0 0 7px var(--bad-soft)}
+.card.shake{animation:shake .42s}
+@keyframes shake{0%,100%{translate:0}20%{translate:-6px}40%{translate:6px}60%{translate:-4px}80%{translate:4px}}
+@media (prefers-reduced-motion: reduce){.card,.card.shake{animation:none;transition:none}}
+.traywrap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:start;background:var(--bg);border-radius:14px;padding:10px}
+.tray{display:flex;gap:6px;align-items:flex-start}
+.slot{width:50px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.mini{width:50px;aspect-ratio:2/3;background:var(--cardface);border:1.5px solid var(--cardedge);border-radius:7px;padding:2px}
+.mini svg{width:100%;height:100%;display:block}
+.mini.empty{background:transparent;border-style:dashed;border-color:var(--muted);display:grid;place-items:center;font-family:var(--display);font-size:20px;color:var(--muted)}
+.mini.ghost{border:2px dashed var(--accent);opacity:.8;box-shadow:0 0 0 4px var(--accent-soft)}
+.slot.ghostlbl{color:var(--accent)}
+.rules{font-size:12px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.rules .rh{font-weight:600;font-size:12px}
+.rule{display:grid;grid-template-columns:54px minmax(0,1fr);gap:6px}
+.rule b{color:var(--muted);font-weight:600}
+.rule em{font-style:normal;color:var(--accent);font-weight:600}
+.trayhelp{font-size:12px;color:var(--muted)}
+.feedback{border-radius:12px;padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:4px}
+.feedback.ok{background:var(--ok-soft)} .feedback.bad{background:var(--bad-soft)} .feedback.info{background:var(--accent-soft)}
+.feedback .ft{font-weight:700;font-size:14px}
+.feedback.ok .ft{color:var(--ok)} .feedback.bad .ft{color:var(--bad)} .feedback.info .ft{color:var(--accent)}
+.frow{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:6px}
+.frow b{font-weight:600;color:var(--muted)}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.overlay{position:absolute;inset:-6px;background:color-mix(in srgb,var(--panel) 93%,transparent);backdrop-filter:blur(3px);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;padding:24px;z-index:5}
+.overlay h2{font-family:var(--display);font-weight:800;font-size:28px;margin:0;line-height:1.1}
+.overlay p{margin:0;color:var(--muted);max-width:34ch}
+.big{font-family:var(--display);font-weight:800;font-size:56px;line-height:1}
+
+/* notes */
+.loads{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.loads{grid-template-columns:minmax(0,1fr)}}
+.ld{border-left:3px solid var(--c);padding-left:12px}
+.ld h3{margin:0 0 2px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--c)}
+.ld p{margin:0;font-size:14px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.on{color:var(--ok);font-weight:600} td.off{color:var(--muted)}
+.notestep{display:grid;grid-template-columns:400px minmax(0,1fr);gap:28px;align-items:start;padding-top:24px;border-top:1px solid var(--line)}
+@media (max-width:900px){.notestep{grid-template-columns:minmax(0,1fr)}}
+.snap{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px 16px 16px 34px;pointer-events:none;max-width:400px;width:100%;font-size:14px}
+.snap .card{border-radius:8px}
+.notetext{display:flex;flex-direction:column;gap:14px;min-width:0}
+.notetext h3.t{font-family:var(--display);font-weight:800;font-size:22px;margin:0}
+.notetext .sub{margin:2px 0 0;color:var(--muted);font-size:14px}
+.notetext .load{display:flex;flex-direction:column;gap:10px}
+.els h4{margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.els ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;font-size:13px}
+.els li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px}
+.els li span,.tag{width:17px;height:17px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:10px;font-weight:700;display:grid;place-items:center}
+.tagged{position:relative}
+.tag{position:absolute;top:0;left:-24px;z-index:2;pointer-events:none}
+.btn .tag{top:-8px;left:-8px}
+.dots .tag{top:-4px}
+.backlink{font-weight:600;text-decoration:none;font-size:14px}
+</style>
+
+</head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <pattern id="st0" width="3.4" height="4" patternUnits="userSpaceOnUse"><rect width="1.3" height="4" style="fill:var(--set-red)"/></pattern>
+  <pattern id="st1" width="3.4" height="4" patternUnits="userSpaceOnUse"><rect width="1.3" height="4" style="fill:var(--set-green)"/></pattern>
+  <pattern id="st2" width="3.4" height="4" patternUnits="userSpaceOnUse"><rect width="1.3" height="4" style="fill:var(--set-purple)"/></pattern>
+</defs></svg>
+
+<!-- ========== OVERVIEW ========== -->
+<div class="wrap" id="v-overview">
+  <section class="hero">
+    <div>
+      <div class="eyebrow">Beginner level prototype</div>
+      <h1>Find the Third</h1>
+      <p class="lede">A short learning level that teaches new SET players to find a set in a 6-card layout with one idea: any two cards decide the third.</p>
+      <div class="ctas">
+        <a class="btn primary lg" href="#play" data-start="1">Play the prototype</a>
+        <a class="btn lg" href="#notes">Read the design notes</a>
+      </div>
+    </div>
+    <dl class="facts panel">
+      <dt>Skill</dt><dd>Find a set in a small layout (Beginner skill 5)</dd>
+      <dt>Builds on</dt><dd>Name the card that completes a pair (Beginner skill 4)</dd>
+      <dt>Mastery test</dt><dd>10 boards; find a set within 30 seconds on at least 8</dd>
+      <dt>Support fades</dt><dd>Worked example → guided → independent → timed check</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2 class="sec">User story</h2>
+    <p class="story">As a <b>new player who knows the rules of SET</b> but freezes when looking at a full board, I want <b>a reliable way to find a set without checking every combination</b>, so that I can <b>keep up with other players in a real game</b>.</p>
+  </section>
+
+  <section>
+    <h2 class="sec">How the level works</h2>
+    <div class="steps" id="ov-steps"></div>
+  </section>
+
+  <section>
+    <h2 class="sec">Design decisions</h2>
+    <ul class="decisions">
+      <li><b>The ghost card makes the hidden step visible</b><span>Experienced players picture the missing card in their head. The ghost card shows that picture on screen, then disappears once the player can do it alone.</span></li>
+      <li><b>Six cards, exactly one set</b><span>A 6-card board has 20 possible triples instead of 220 on a 12-card board, so the strategy can be learned before the search gets large.</span></li>
+      <li><b>One screen layout from start to finish</b><span>Only the supports change between steps (ghost card, hints, timer), so the player never has to relearn the interface.</span></li>
+      <li><b>Feedback colors that don't clash with the cards</b><span>Correct is teal and incorrect is orange, so feedback is never confused with the red, green, and purple on the cards.</span></li>
+      <li><b>Feedback explains every attribute</b><span>Correct answers list all four attributes. Wrong answers name only the attributes that broke the rule, so the player knows exactly what to fix.</span></li>
+      <li><b>A way back after a failed challenge</b><span>Scoring below 8/10 sends the player back to guided practice with the ghost card instead of ending the level.</span></li>
+    </ul>
+  </section>
+</div>
+
+<!-- ========== PLAY ========== -->
+<div id="v-play" hidden>
+  <div class="playbar">
+    <a href="#overview">← Overview</a>
+    <div class="stepmenu"><div class="pills" id="pills" role="group" aria-label="Jump to step"></div></div>
+    <a href="#notes">Design notes →</a>
+  </div>
+  <p class="stepname" id="stepname"></p>
+  <div class="stage"><div class="screen" id="play"></div></div>
+</div>
+
+<!-- ========== NOTES ========== -->
+<div class="wrap" id="v-notes" hidden>
+  <div>
+    <a class="backlink" href="#overview">← Overview</a>
+    <div class="eyebrow" style="margin-top:16px">Find the Third · Beginner level</div>
+    <h1>Design notes</h1>
+    <p class="lede">How each step of the level handles the three kinds of cognitive load. Letters on each screen match the list beside it.</p>
+    <div class="ctas"><a class="btn primary" href="#play" data-start="1">Play the prototype</a></div>
+  </div>
+  <section class="panel">
+    <div class="loads">
+      <div class="ld" style="--c:var(--i)"><h3>Intrinsic load</h3><p>How hard the skill itself is: how many things the player has to hold in mind and relate at once.</p></div>
+      <div class="ld" style="--c:var(--e)"><h3>Extraneous load</h3><p>Effort spent on the presentation rather than the skill: clutter, waiting, searching for information, unclear feedback.</p></div>
+      <div class="ld" style="--c:var(--g)"><h3>Germane load</h3><p>Effort that builds lasting understanding: noticing patterns, explaining why, practising recall.</p></div>
+    </div>
+  </section>
+  <section>
+    <h2 class="sec">How support fades</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Step</th><th>Ghost card</th><th>Hints</th><th>Timer</th><th>Who picks the pair</th></tr></thead>
+      <tbody>
+        <tr><td>1 Introduce</td><td class="on">Shown</td><td class="off">None needed</td><td class="off">None</td><td>Already chosen</td></tr>
+        <tr><td>2–4 Guided try with feedback</td><td class="on">Shown</td><td class="on">Free</td><td class="off">None</td><td>Player</td></tr>
+        <tr><td>5 Practice</td><td class="off">Off</td><td class="off">Locked</td><td>Quiet, counts up, no limit</td><td>Player</td></tr>
+        <tr><td>6 Demonstrate</td><td class="off">Off</td><td class="off">Locked</td><td>30 s countdown</td><td>Player</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+  <section id="notes-steps" style="display:flex;flex-direction:column;gap:24px"></section>
+</div>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const ATTR=[
+  {k:'n',name:'Number',vals:['one','two','three']},
+  {k:'c',name:'Color',vals:['red','green','purple']},
+  {k:'s',name:'Shape',vals:['diamond','oval','squiggle']},
+  {k:'f',name:'Shading',vals:['solid','striped','open']}];
+const third=(a,b)=>{const o={};for(const {k} of ATTR)o[k]=a[k]===b[k]?a[k]:3-a[k]-b[k];return o};
+const same=(a,b)=>ATTR.every(({k})=>a[k]===b[k]);
+const isSet=(a,b,c)=>ATTR.every(({k})=>(a[k]+b[k]+c[k])%3===0);
+const r3=()=>Math.floor(Math.random()*3);
+const rnd=()=>({n:r3(),c:r3(),s:r3(),f:r3()});
+function findSets(b){const r=[];for(let i=0;i<b.length;i++)for(let j=i+1;j<b.length;j++)for(let k=j+1;k<b.length;k++)if(isSet(b[i],b[j],b[k]))r.push([i,j,k]);return r}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function makeBoard(){for(;;){const a=rnd();let b;do b=rnd();while(same(a,b));const cards=[a,b,third(a,b)];
+  while(cards.length<6){const x=rnd();if(!cards.some(y=>same(x,y)))cards.push(x)}
+  shuffle(cards);if(findSets(cards).length===1)return cards}}
+const indexOfCard=(b,c)=>b.findIndex(x=>same(x,c));
+function describe(c){const v=k=>ATTR.find(a=>a.k===k).vals;return `${v('n')[c.n]} ${v('c')[c.c]} ${v('f')[c.f]} ${v('s')[c.s]}${c.n?'s':''}`}
+
+const COL=['var(--set-red)','var(--set-green)','var(--set-purple)'];
+const SHP=['<path d="M2 14 L32 1 L62 14 L32 27 Z"/>','<rect x="2" y="2" width="60" height="24" rx="12"/>',
+ '<path d="M4 20 C2 8 14 1 26 6 C34 9 40 10 48 4 C56 -1 63 6 60 13 C57 22 46 27 36 22 C28 18 22 18 14 24 C8 28 5 25 4 20 Z"/>'];
+function art(c){const k=c.n+1,tot=28*k+10*(k-1);let y=(150-tot)/2,g='';
+  const fill=c.f===0?COL[c.c]:c.f===1?`url(#st${c.c})`:'none';
+  for(let j=0;j<k;j++){g+=`<g transform="translate(18 ${y})">${SHP[c.s]}</g>`;y+=38}
+  return `<svg viewBox="0 0 100 150" aria-hidden="true"><g style="fill:${fill};stroke:${COL[c.c]};stroke-width:2.6;stroke-linejoin:round">${g}</g></svg>`}
+const LOCK='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>';
+
+/* fixed boards (each verified to contain exactly one set) */
+const A={n:0,c:0,s:2,f:0},B={n:1,c:0,s:2,f:1},C={n:2,c:0,s:2,f:2},D={n:0,c:1,s:0,f:2},E={n:1,c:2,s:1,f:0},F={n:2,c:1,s:1,f:1};
+const INTRO=[A,D,C,E,B,F];                         /* set at 0,2,4 */
+const X0={n:0,c:1,s:0,f:1},X1={n:1,c:2,s:0,f:1},X2={n:2,c:0,s:0,f:1},O1={n:0,c:0,s:1,f:2},O2={n:2,c:2,s:2,f:0},O3={n:1,c:1,s:1,f:0};
+const GB=[O1,X0,O2,X1,O3,X2];                     /* set at 1,3,5 */
+
+const MENU=[
+ {key:1,label:'1',name:'Introduce',views:[1],ov:'A worked example. Two cards are already chosen and the ghost card shows the third. The player finds it on the board.'},
+ {key:2,label:'2–4',name:'Guided try with feedback',views:[2,3,4],ov:'The player picks any pair and the ghost card shows what would complete it. A correct pick glows and explains all four attributes (✓ branch). A wrong pick shakes and names the attributes that didn\'t match (✗ branch, loops back).'},
+ {key:5,label:'5',name:'Practice',views:[5],ov:'No ghost card and no hints, with a quiet timer. The player pictures the third card themselves. Wrong picks name the attribute that breaks the rule.'},
+ {key:6,label:'6',name:'Demonstrate',views:[6],ov:'10 boards, 30 seconds each. Find a set on 8 to master the skill, or go back to guided practice.'}];
+const menuFor=v=>MENU.find(x=>x.views.includes(v));
+/* design-notes sections: step 2–4 is split into its three parts */
+const PARTS=[
+ {view:1,eyebrow:'Step 1',title:'Introduce'},
+ {view:2,eyebrow:'Step 2–4 · Part A',title:'Guided try'},
+ {view:3,eyebrow:'Step 2–4 · Part B (✓ branch)',title:'Correct response'},
+ {view:4,eyebrow:'Step 2–4 · Part C (✗ branch)',title:'Incorrect response'},
+ {view:5,eyebrow:'Step 5',title:'Practice'},
+ {view:6,eyebrow:'Step 6',title:'Demonstrate'}];
+
+const NOTES={
+ 1:{sub:'Worked example. Two cards are already chosen; the ghost card shows the third.',
+  I:'One new idea: two cards decide the third. The board has 6 cards and exactly one set, so there are 20 possible triples instead of 220 on a full 12-card board.',
+  E:'No timer, score, or menus. The rule for each attribute sits right beside the ghost card, so the player never looks back and forth between text and cards. Nothing on the board is pre-highlighted, so the answer isn\'t given away.',
+  G:'The attribute-by-attribute breakdown models the reasoning step by step. The player finishes the example by finding the card, so they act on the rule instead of only reading it. Players who aren\'t ready can watch more worked examples on new boards before trying alone, so each learner moves on once the pattern makes sense to them.',
+  els:[['C','Instruction line'],['D','Board: 6 cards, one set'],['E','Selection tray: 2 chosen cards + ghost card'],['F','Ghost rules: same → same, different → the missing value']]},
+ 2:{sub:'The player picks the pair. The ghost card still works out the third.',
+  I:'Same single idea, but now the player chooses the pair. The ghost card still does the inference, which temporarily lowers intrinsic load so the player can focus on choosing pairs and scanning.',
+  E:'No timer. Hints are free, appear in place as a dashed outline on the board, and respond to what the player has already chosen. A hint never changes the board or the player\'s picks; it only highlights the next thing to tap (a card, the player\'s own card to put back, or the "Not on the board" button). Tapping a chosen card again deselects it, so a mistake costs one tap. Players who already get it can press "Try it yourself" to skip ahead, so guidance they no longer need doesn\'t slow them down.',
+  G:'Most pairs\' third card is not on the board. Pressing "Not on the board" practises the real search loop: pick a pair, picture the third, check, move on. A new ghost for every pair reinforces "two cards decide the third."',
+  els:[['A','Progress dots: 3 guided boards'],['C','Instruction line'],['D','Board'],['E','Selection tray with ghost card'],['F','Ghost rules'],['H','Hint button (free)']]},
+ 3:{sub:'What the player sees after a correct pick during the guided try. "Next board" continues the guided try (board 2, then 3).',
+  I:'No new task; this step is feedback only.',
+  E:'Feedback appears on the same screen: the three cards glow and a short banner opens. There is no pop-up to dismiss and no animation to wait through.',
+  G:'The banner explains all four attributes, not just one, so every success restates the full rule. The progress dot fills so the player sees how far along they are.',
+  els:[['A','Progress dot fills'],['D','Three cards glow'],['G','Banner: all four attributes, each marked same or different']]},
+ 4:{sub:'What the player sees after picking a card that isn\'t the ghost card. The player stays on the same board and tries again.',
+  I:'Same board and same pair, so a mistake doesn\'t make the task harder.',
+  E:'The wrong card shakes once and goes back to the board. There is one short line per mismatched attribute and no error screen.',
+  G:'The banner names each attribute where the picked card differs from the ghost card (for example "Shading: needed open, picked striped"), so the player can fix their reasoning instead of guessing again.',
+  els:[['D','Wrong card shakes and returns'],['E','Pair and ghost card stay in the tray'],['G','Mismatch rows, one per attribute']]},
+ 5:{sub:'Scaffolds removed. The player pictures the third card themselves.',
+  I:'Full skill: pick a pair, picture the third card in your head, then find it on the board.',
+  E:'Same layout as before, so there is nothing new to learn about the screen. The timer is quiet: small gray text that counts up with no limit and no penalty, so it doesn\'t pressure the player or pull attention from the board. It gets the player used to being timed before the 30-second countdown in step 6, so the challenge screen doesn\'t feel new.',
+  G:'Without the ghost card, the player has to produce the third card from memory (retrieval practice), which builds the schema. Wrong triples name the attribute that breaks the rule, so the player can correct their own reasoning.',
+  els:[['A','Progress dots: 3 practice boards'],['B','Quiet timer: counts up, no limit'],['E','Tray with an empty "?" slot'],['H','Hint button, locked']]},
+ 6:{sub:'Mastery check that matches the Phase 1 test.',
+  I:'Full skill under the test conditions: 10 boards, 30 seconds each, pass at 8.',
+  E:'Same screen; only the countdown bar is new. Feedback is cut to a quick glow so it doesn\'t eat into the next board\'s time.',
+  G:'Progress dots show hits and misses across all 10 boards. When time runs out, the set is shown briefly so a miss still teaches. Players below 8/10 are sent back to guided practice.',
+  els:[['A','10 progress dots: hit or miss'],['B','30-second countdown bar'],['D','Board'],['—','Results panel with next step (after board 10)']]}
+};
+
+/* ---------- screen rendering (shared by live play and snapshots) ---------- */
+const ghostMode=st=>st.step===1||st.step===2||(st.step===5&&st.rescue);
+const fmt=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+const tbar=left=>`<span class="tbar ${left<8?'low':''}"><i style="width:${left/30*100}%"></i></span>${Math.ceil(left)} s`;
+function timerInner(st){
+  if(st.step===5)return fmt(st.fakeSecs??Math.floor((Date.now()-st.t0)/1000));
+  if(st.step===6)return tbar(st.fakeLeft??(st.overlay?30:Math.max(0,30-(Date.now()-st.t0)/1000)));
+  return ''}
+function rowsSet(cards){return ATTR.map(a=>{const v=cards.map(c=>a.vals[c[a.k]]);
+  return `<div class="frow"><b>${a.name}</b><span>${v.join(', ')}</span><span>${v[0]===v[1]?'all same':'all different'} ✓</span></div>`}).join('')}
+function rowsBroken(cards){return ATTR.filter(a=>(cards[0][a.k]+cards[1][a.k]+cards[2][a.k])%3!==0).map(a=>
+  `<div class="frow"><b>${a.name}</b><span>${cards.map(c=>a.vals[c[a.k]]).join(', ')}</span><span>two match, one doesn't ✗</span></div>`).join('')}
+function rowsGhost(card,g){return ATTR.filter(a=>card[a.k]!==g[a.k]).map(a=>
+  `<div class="frow"><b>${a.name}</b><span>needed ${a.vals[g[a.k]]}, picked ${a.vals[card[a.k]]}</span><span>✗</span></div>`).join('')}
+
+function screenHTML(st,tags){
+  const T=l=>tags?`<span class="tag" aria-hidden="true">${l}</span>`:'';
+  const s=st.step,gm=ghostMode(st);
+  const label=s===1?`Learn · example ${st.example||1}`:({2:'Guided',5:'Practice',6:'Challenge'})[s];
+  let dots='';
+  if(s===2||s===5)dots=`<div class="dots tagged">${T('A')}${[0,1,2].map(i=>`<span class="dot ${i<st.round?'hit':i===st.round?'cur':''}"></span>`).join('')}</div>`;
+  else if(s===6)dots=`<div class="dots tagged">${T('A')}${Array.from({length:10},(_,i)=>`<span class="dot ${st.test.res[i]||(i===st.test.i&&!st.overlay?'cur':'')}"></span>`).join('')}</div>`;
+  const timer=(s===5||s===6)?`<div class="timer tagged">${T('B')}<span class="tv">${timerInner(st)}</span></div>`:'<div class="timer"></div>';
+  let ins='';
+  if(s===1)ins=st.locked?'You found it. That\'s the whole idea.<small>Watch another example, or try choosing the pair yourself.</small>':'Any two cards decide the third.<small>Read the ghost card in the tray, then find it on the board and tap it.</small>';
+  else if(s===2||(s===5&&st.rescue))ins=st.locked&&st.fb?.kind==='ok'?'Nice. Ready for the next board?':st.sel.length===0?'Tap any two cards.<small>The ghost card will show the card that completes them.</small>':st.sel.length===1?'Tap one more card to make a pair.':'Is the ghost card on the board?<small>Tap it, or press "Not on the board" and try another pair.</small>';
+  else if(s===5)ins=st.locked&&st.fb?.kind==='ok'?'Nice. Ready for the next board?':'Find a set.<small>Pick two cards, picture the third in your head, then look for it.</small>';
+  else ins='Find a set before time runs out.<small>No hints and no ghost card.</small>';
+  const set0=findSets(st.board)[0]||[];
+  const cards=st.board.map((c,i)=>{const sel=st.sel.includes(i);
+    const cls=[sel?'sel':'',st.marks[i]||'',st.shake.includes(i)?'shake':'',(!st.locked&&(st.hintCards||[]).includes(i))?'hint':''].join(' ');
+    return `<button class="card ${cls}" data-i="${i}" ${tags?'tabindex="-1"':''} aria-label="${describe(c)}${sel?', selected':''}" aria-pressed="${sel}">${art(c)}</button>`}).join('');
+  const slots=[0,1,2].map(k=>{
+    if(k<2||!gm){const idx=st.sel[k];return idx!=null?`<div class="slot"><div class="mini">${art(st.board[idx])}</div>Card ${k+1}</div>`:`<div class="slot"><div class="mini empty">?</div>${k<2?'Card '+(k+1):'Third'}</div>`}
+    if(st.sel.length>=2){const g=third(st.board[st.sel[0]],st.board[st.sel[1]]);return `<div class="slot ghostlbl"><div class="mini ghost">${art(g)}</div>Ghost</div>`}
+    return `<div class="slot ghostlbl"><div class="mini empty">?</div>Ghost</div>`}).join('');
+  let rules;
+  if(gm&&st.sel.length>=2){const a=st.board[st.sel[0]],b=st.board[st.sel[1]],g=third(a,b);
+    rules=T('F')+`<div class="rh">Same → same. Different → the missing one.</div>`+ATTR.map(x=>`<div class="rule"><b>${x.name}</b><span>${x.vals[a[x.k]]} + ${x.vals[b[x.k]]} → <em>${x.vals[g[x.k]]}</em></span></div>`).join('')}
+  else if(gm)rules=T('F')+`<div class="trayhelp">Choose two cards. The ghost card and its rules appear here.</div>`;
+  else rules=`<div class="trayhelp">${s===6?'Three cards, every attribute all same or all different.':'No ghost card now. Picture the third card yourself.'}</div>`;
+  const fb=st.fb?`<div class="feedback tagged ${st.fb.kind}">${T('G')}${st.fb.html}</div>`:'';
+  /* actions */
+  const b=[];
+  if(s===1){if(st.locked){b.push(`<button class="btn" data-act="another">Show me another example</button>`);b.push(`<button class="btn primary" data-act="toGuided">Guided practice →</button>`)}}
+  else if(s===2){
+    if(st.locked&&st.fb?.kind==='ok'){if(st.round<3)b.push(`<button class="btn primary" data-act="nextGuided">Next board →</button>`);
+      b.push(`<button class="btn ${st.round>=3?'primary':''}" data-act="toPractice">Try it yourself →</button>`)}
+    else{b.push(`<button class="btn" data-act="hint">${T('H')}Hint (free)</button>`);
+      b.push(`<button class="btn ${st.hintBtn?'hintbtn':''}" data-act="none" ${st.sel.length===2?'':'disabled'}>Not on the board</button>`);
+      if(st.sel.length)b.push(`<button class="btn" data-act="clear">Clear</button>`);
+      b.push(`<button class="btn" data-act="toPractice" style="margin-left:auto">Try it yourself →</button>`)}}
+  else if(s===5){
+    if(st.locked&&st.fb?.kind==='ok')b.push(st.round>=3?`<button class="btn primary" data-act="toTest">Take the challenge →</button>`:`<button class="btn primary" data-act="nextPractice">Next board →</button>`);
+    else{b.push(`<button class="btn" disabled title="Hints are locked in practice">${T('H')}${LOCK}Hints locked</button>`);
+      if(st.rescue)b.push(`<button class="btn" data-act="none" ${st.sel.length===2?'':'disabled'}>Not on the board</button>`);
+      if(st.sel.length)b.push(`<button class="btn" data-act="clear">Clear</button>`);
+}}
+  else if(s===6&&!st.overlay)b.push(`<button class="btn" data-act="retry">Restart challenge</button>`);
+  /* overlay */
+  let ov='';
+  if(st.overlay==='start')ov=`<div class="overlay"><div class="eyebrow">Show what you can do</div><h2>10 boards.<br>30 seconds each.</h2><p>Find a set on at least 8 boards to master this skill. No hints and no ghost card.</p><button class="btn primary" data-act="start">Start the challenge</button></div>`;
+  else if(st.overlay==='results'){const hits=st.test.res.filter(r=>r==='hit').length,pass=hits>=8;
+    const avg=st.test.times.length?(st.test.times.reduce((a,b)=>a+b,0)/st.test.times.length).toFixed(1):'–';
+    ov=`<div class="overlay"><div class="eyebrow">${pass?'Skill mastered':'Almost there'}</div><div class="big">${hits}/10</div>
+    <p>${pass?`Average find time ${avg} s. Next up at the intermediate level: narrowing the search by one attribute on a 12-card board.`:'You need 8 to pass. A few more guided boards with the ghost card will help the pattern stick.'}</p>
+    <div class="actions" style="justify-content:center">${pass?`<button class="btn primary" data-act="retry">Retry the challenge</button><button class="btn" data-act="restart">Restart the level</button>`:`<button class="btn primary" data-act="toGuided">Back to guided practice</button><button class="btn" data-act="retry">Retry the challenge</button><button class="btn" data-act="restart">Restart the level</button>`}<a class="btn" href="#notes">See design notes</a></div></div>`}
+  return `<div class="bar"><div class="steplabel">${label}</div>${dots}${timer}</div>
+  <p class="instr tagged">${T('C')}${ins}</p>
+  <div class="main">
+    <div class="board tagged">${T('D')}${cards}</div>
+    <div class="side">
+      <div class="traywrap"><div class="tray tagged">${T('E')}${slots}</div><div class="rules tagged">${rules}</div></div>${fb}
+      <div class="actions">${b.join('')}</div>
+    </div>
+  </div>${ov}`;
+}
+
+/* ---------- live play state ---------- */
+const S={step:1,view:1,board:[],sel:[],round:0,hint:0,locked:false,fb:null,marks:{},shake:[],t0:0,rescue:false,stuckShown:false,test:null,overlay:null,timers:[],tick:null,started:false};
+function clearTimers(){S.timers.forEach(clearTimeout);S.timers=[];if(S.tick){clearInterval(S.tick);S.tick=null}}
+function later(fn,ms){S.timers.push(setTimeout(fn,ms))}
+function reset(){S.sel=[];S.hint=0;S.hintCards=[];S.hintBtn=false;S.locked=false;S.fb=null;S.marks={};S.shake=[];S.overlay=null;S.rescue=false;S.stuckShown=false}
+
+function setupIntro(another){clearTimers();reset();S.step=1;S.view=1;
+  if(another){S.board=makeBoard();const st=shuffle(findSets(S.board)[0].slice());S.sel=[st[0],st[1]];S.example++}
+  else{S.board=INTRO.slice();S.sel=[0,4];S.example=1}
+  render()}
+function setupGuided(round){clearTimers();reset();S.step=2;S.view=2;S.round=round||0;S.board=makeBoard();render()}
+function setupPractice(round){clearTimers();reset();S.step=5;S.view=5;S.round=round||0;S.board=makeBoard();S.t0=Date.now();S.tick=setInterval(tickPractice,250);render()}
+function setupTest(){clearTimers();reset();S.step=6;S.view=6;S.test={i:0,res:[],times:[]};S.board=makeBoard();S.overlay='start';render()}
+function startTestBoard(){reset();S.board=makeBoard();S.t0=Date.now();if(S.tick)clearInterval(S.tick);S.tick=setInterval(tickTest,200);render()}
+function goStep(n){S.started=true;
+  if(n===1)setupIntro();else if(n===2)setupGuided(0);
+  else if(n===3||n===4){setupGuided(0);const st=findSets(S.board)[0];S.sel=[st[0],st[1]];S.view=n;render();
+    const g=S.board[st[2]],diff=c=>ATTR.filter(a=>c[a.k]!==g[a.k]).length;
+    const wrong=[0,1,2,3,4,5].filter(i=>!st.includes(i)).sort((a,b)=>diff(S.board[a])-diff(S.board[b]))[0];
+    later(()=>n===3?success(st[2]):fail(wrong),900)}
+  else if(n===5)setupPractice(0);else setupTest()}
+
+function setTimerText(){const t=$('play').querySelector('.tv');if(t)t.innerHTML=timerInner(S)}
+function tickPractice(){setTimerText()}
+function tickTest(){if(S.locked)return;setTimerText();if(Date.now()-S.t0>=30000)timeout()}
+
+function onCard(i){
+  if(S.locked||S.overlay)return;
+  S.hintCards=[];S.hintBtn=false;
+  if(S.view===3||S.view===4)S.view=S.step;
+  if(S.fb&&S.fb.kind!=='ok')S.fb=null;
+  const pos=S.sel.indexOf(i);
+  if(pos>-1){if(S.step===1)return;S.sel.splice(pos,1);render();return}
+  if(ghostMode(S)){
+    if(S.sel.length<2){S.sel.push(i);render();return}
+    const g=third(S.board[S.sel[0]],S.board[S.sel[1]]);same(S.board[i],g)?success(i):fail(i);return}
+  S.sel.push(i);if(S.sel.length<3){render();return}
+  isSet(...S.sel.map(x=>S.board[x]))?success(null):fail(null);
+}
+function success(i){
+  if(i!=null)S.sel.push(i);
+  const t=S.sel.map(x=>S.board[x]);S.locked=true;S.marks={};S.sel.forEach(x=>S.marks[x]='good');
+  if(S.step===6){const secs=(Date.now()-S.t0)/1000;S.test.res.push('hit');S.test.times.push(secs);
+    S.fb={kind:'ok',html:`<div class="ft">Set! ${secs.toFixed(1)} s</div>`};render();later(nextTest,900);return}
+  if(S.step!==1)S.round++;
+  S.view=S.step===1?1:3;
+  S.fb={kind:'ok',html:`<div class="ft">That's a set.</div>${rowsSet(t)}`};render();
+}
+function fail(i){
+  let html;
+  if(ghostMode(S)){const g=third(S.board[S.sel[0]],S.board[S.sel[1]]);
+    html=`<div class="ft">That's not the ghost card.</div>${rowsGhost(S.board[i],g)}<div class="trayhelp">Your pair is still chosen. Compare the board with the ghost card and try again.</div>`;
+    S.marks={[i]:'bad'};S.shake=[i];
+  }else{const t=S.sel.map(x=>S.board[x]);
+    html=`<div class="ft">Not a set.</div>${rowsBroken(t)}${S.step===6?'':'<div class="trayhelp">Every attribute has to be all same or all different.</div>'}`;
+    S.marks={};S.sel.forEach(x=>S.marks[x]='bad');S.shake=S.sel.slice()}
+  if(S.step===2)S.view=4;
+  S.fb={kind:'bad',html};S.locked=true;render();
+  later(()=>{S.locked=false;S.shake=[];S.marks={};if(!ghostMode(S))S.sel=[];render()},S.step===6?650:900);
+}
+function notOnBoard(){
+  S.hintBtn=false;S.hintCards=[];
+  const g=third(S.board[S.sel[0]],S.board[S.sel[1]]);
+  if(indexOfCard(S.board,g)===-1){S.fb={kind:'info',html:`<div class="ft">Right, that card isn't here.</div><div>No set uses this pair. Pick a different pair.</div>`};S.sel=[]}
+  else S.fb={kind:'bad',html:`<div class="ft">Look again.</div><div>The ghost card is on this board. Check one attribute at a time, starting with color.</div>`};
+  render()}
+/* hint responds to what the player has already chosen */
+function hint(){
+  const set=findSets(S.board)[0],inSet=S.sel.filter(i=>set.includes(i));let msg;
+  S.hintCards=[];S.hintBtn=false;
+  if(S.sel.length===0){S.hintCards=[set[0]];msg='Tap the highlighted card. It belongs to the set on this board.'}
+  else if(S.sel.length===1){
+    if(inSet.length){S.hintCards=[set.find(i=>i!==S.sel[0])];msg='Your card is in the set. Tap the highlighted card to make your pair.'}
+    else{S.hintCards=[S.sel[0]];msg='Your card isn\'t part of the set on this board. Tap it again to put it back, then choose a different card.'}}
+  else{
+    if(inSet.length===2){S.hintCards=[set.find(i=>!S.sel.includes(i))];msg='Your pair works. The highlighted card matches the ghost card. Tap it.'}
+    else{S.hintBtn=true;msg='The ghost card isn\'t on this board, so this pair can\'t make a set. Press the highlighted "Not on the board" button.'}}
+  if(S.view===3||S.view===4)S.view=S.step;
+  S.fb={kind:'info',html:`<div class="ft">Hint</div><div>${msg}</div>`};render()}
+function timeout(){S.locked=true;clearInterval(S.tick);S.tick=null;S.test.res.push('miss');
+  S.sel=[];S.marks={};findSets(S.board)[0].forEach(x=>S.marks[x]='good');
+  S.fb={kind:'info',html:`<div class="ft">Time's up. Here's the set.</div>`};render();later(nextTest,1600)}
+function nextTest(){S.test.i++;if(S.tick){clearInterval(S.tick);S.tick=null}
+  if(S.test.i>=10){S.overlay='results';S.locked=true;render();return}startTestBoard()}
+
+function render(){
+  $('play').innerHTML=screenHTML(S,false);
+  const m=menuFor(S.view);
+  const bd=(S.step===2||S.step===5)?` · board ${Math.min(S.round+(S.locked&&S.fb?.kind==='ok'?0:1),3)} of 3`:'';
+  const part=S.view===3?' · correct response':S.view===4?' · incorrect response':'';
+  $('stepname').textContent=`Step ${m.label} · ${m.name}${part}${bd}`;
+  $('pills').innerHTML=MENU.map(x=>`<button data-step="${x.key}" aria-label="Step ${x.label}: ${x.name}" ${x===m?'aria-current="step"':''}>${x.label}</button>`).join('');
+}
+
+$('play').addEventListener('click',e=>{
+  const c=e.target.closest('.card');if(c){onCard(+c.dataset.i);return}
+  const a=e.target.closest('[data-act]');if(!a||a.disabled)return;
+  ({toGuided:()=>setupGuided(0),nextGuided:()=>setupGuided(S.round),toPractice:()=>setupPractice(0),
+    nextPractice:()=>setupPractice(S.round),toTest:setupTest,another:()=>setupIntro(true),
+    hint,none:notOnBoard,
+    clear:()=>{S.sel=[];S.fb=null;S.view=S.step;render()},
+    rescue:()=>{S.rescue=true;S.sel=[];S.fb={kind:'info',html:'<div class="ft">The ghost card is back for this board.</div><div>Pick a pair and it will show the third card.</div>'};render()},
+    start:()=>{S.overlay=null;startTestBoard()},retry:setupTest,restart:setupIntro})[a.dataset.act]?.()});
+$('pills').addEventListener('click',e=>{const b=e.target.closest('button');if(b)goStep(+b.dataset.step)});
+
+/* ---------- overview step cards ---------- */
+$('ov-steps').innerHTML=MENU.map(x=>`<div class="stepcard"><div class="n">${x.label}</div><h3>${x.name}</h3><p>${x.ov}</p><button data-open="${x.key}">Open this step →</button></div>`).join('');
+let pending=1;
+$('ov-steps').addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(!b)return;pending=+b.dataset.open;S.started=false;location.hash='play'});
+document.querySelectorAll('[data-start]').forEach(a=>a.addEventListener('click',()=>{pending=1;S.started=false}));
+
+/* ---------- notes snapshots ---------- */
+function snapState(o){return Object.assign({sel:[],round:0,hint:0,locked:false,fb:null,marks:{},shake:[],rescue:false,stuckShown:false,overlay:null,test:null},o)}
+const SNAPS={
+ 1:snapState({step:1,board:INTRO,sel:[0,4]}),
+ 2:snapState({step:2,board:GB,sel:[1,3]}),
+ 3:snapState({step:2,board:GB,sel:[1,3,5],round:1,locked:true,marks:{1:'good',3:'good',5:'good'},fb:{kind:'ok',html:`<div class="ft">That's a set.</div>${rowsSet([X0,X1,X2])}`}}),
+ 4:snapState({step:2,board:GB,sel:[1,3],marks:{4:'bad'},fb:{kind:'bad',html:`<div class="ft">That's not the ghost card.</div>${rowsGhost(O3,third(X0,X1))}`}}),
+ 5:snapState({step:5,board:GB,sel:[0],round:1,fakeSecs:48,stuckShown:true}),
+ 6:snapState({step:6,board:[F,A,E,C,D,B],test:{i:4,res:['hit','hit','miss','hit'],times:[]},fakeLeft:18})
+};
+$('notes-steps').innerHTML=PARTS.map(x=>{const N=NOTES[x.view];
+  return `<article class="notestep">
+   <div class="snap"><div class="screen">${screenHTML(SNAPS[x.view],true)}</div></div>
+   <div class="notetext">
+     <div><div class="eyebrow">${x.eyebrow}</div><h3 class="t">${x.title}</h3><p class="sub">${N.sub}</p></div>
+     <div class="load">
+       <div class="ld" style="--c:var(--i)"><h3>Intrinsic load</h3><p>${N.I}</p></div>
+       <div class="ld" style="--c:var(--e)"><h3>Extraneous load</h3><p>${N.E}</p></div>
+       <div class="ld" style="--c:var(--g)"><h3>Germane load</h3><p>${N.G}</p></div>
+     </div>
+     <div class="els"><h4>On this screen</h4><ul>${N.els.map(([l,t])=>`<li><span>${l}</span>${t}</li>`).join('')}</ul></div>
+   </div></article>`}).join('');
+
+/* ---------- routing ---------- */
+function route(){
+  const h=location.hash.slice(1);const v=(h==='play'||h==='notes')?h:'overview';
+  ['overview','play','notes'].forEach(x=>$('v-'+x).hidden=x!==v);
+  if(v==='play'){if(!S.started)goStep(pending);}
+  else{clearTimers();S.started=false;pending=S.view||1}
+  window.scrollTo(0,0);
+}
+window.addEventListener('hashchange',route);
+route();
+})();
+</script>
+
+</body></html>
